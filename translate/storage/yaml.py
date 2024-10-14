@@ -74,6 +74,13 @@ class YAMLUnit(base.DictUnit):
     def storevalues(self, output):
         self.storevalue(output, self.convert_target())
 
+def str_representor(dumper, data):
+    # https://stackoverflow.com/questions/8640959/how-can-i-control-what-scalar-form-pyyaml-uses-for-my-data
+    if len(data.splitlines()) > 1 or '\n' in data:
+        return dumper.represent_scalar('tag:yaml.org,2002:str', data, style='|')
+    if len(data) > 60:
+        return dumper.represent_scalar('tag:yaml.org,2002:str', data, style='>')
+    return dumper.represent_scalar('tag:yaml.org,2002:str', data, style='"')
 
 class YAMLFile(base.DictStore):
     """A YAML file."""
@@ -101,6 +108,13 @@ class YAMLFile(base.DictStore):
         yaml = YAML()
         for arg, value in self.dump_args.items():
             setattr(yaml, arg, value)
+
+        yaml.width = 65536
+        yaml.default_flow_style = False
+        yaml.preserve_quotes = False
+        yaml.indent(sequence=2, offset=4)
+        yaml.representer.add_representer(str, str_representor)
+
         return yaml
 
     def serialize(self, out):
